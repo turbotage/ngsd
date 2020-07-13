@@ -22,19 +22,9 @@ namespace ngsd {
 	};
 
 
-
-
-
-
 	struct Image {
 		std::string uri = "";
 	};
-
-
-
-
-
-
 
 
 	struct Texture {
@@ -43,15 +33,9 @@ namespace ngsd {
 	};
 
 
-
-
-
-
-
-
 	struct Material {
 		std::string name;
-		struct {
+		struct PbrMetallicRoughness {
 			std::array<float, 4> baseColorFactor = {-1.0f, -1.0f, -1.0f, -1.0f};
 			struct {
 				int32_t index = -1;
@@ -67,32 +51,21 @@ namespace ngsd {
 
 		} pbrMetallicRoughness;
 
-		struct {
+		struct NormalTexture {
 			float scale = 0.0f;
 			int32_t index = -1;
 			int32_t texCoord = -1;
 		} normalTexture;
 
 		std::array<float, 3> emissiveFactor = {-1.0f, -1.0f, -1.0f};
-
 	};
-
-
-
-
-
-
-
 
 
 	struct Primitive {
-		uint32_t firstIndex;
-		uint32_t indexCount;
-		uint32_t materialIndex;
+		int32_t firstIndex = -1;
+		int32_t indexCount = -1;
+		int32_t materialIndex = -1;
 	};
-
-
-
 
 
 	struct Mesh {
@@ -101,35 +74,19 @@ namespace ngsd {
 	};
 
 
-
-
-
 	struct Node {
 		std::string name;
 
 		std::array<float, 16> matrix4x4;
 
-		uint32_t meshIndex;
+		int32_t meshIndex;
 
-		std::vector<uint32_t> childNodeIndices;
+		std::vector<int32_t> childNodeIndices;
 
 	};
 
 
-
-
-
-
 	struct Scene {
-	public:
-
-		Scene(std::string& ngsdPath) {
-			std::ifstream i(ngsdPath);
-			i >> m_NgsdJson;
-
-		}
-
-	private:
 		std::string name;
 		std::vector<Node> nodes;
 		std::vector<Mesh> meshes;
@@ -150,7 +107,11 @@ namespace ngsd {
 	using json = nlohmann::json;
 
 	void to_json(json& j, const ngsd::Sampler& s) {
-		j = json{ {"magFilter", s.magFilter},{"minFilter", s.minFilter},{"wrapS", s.wrapS},{"wrapT", s.wrapT} };
+		//j = json{ {"magFilter", s.magFilter},{"minFilter", s.minFilter},{"wrapS", s.wrapS},{"wrapT", s.wrapT} };
+		j["magFilter"] = s.magFilter;
+		j["minFilter"] = s.minFilter;
+		j["wrapS"] = s.wrapS;
+		j["wrapT"] = s.wrapT;
 	}
 
 	void from_json(const json& j, ngsd::Sampler& s) {
@@ -187,23 +148,31 @@ namespace ngsd {
 	void to_json(json& j, const ngsd::Material& m) {
 		j = json{
 			{"name", m.name},
-			{"pbrMetallicRoughness",
-				{"baseColorFactor", m.pbrMetallicRoughness.baseColorFactor},
-				{"baseColorTexture",
-					{"index", m.pbrMetallicRoughness.baseColorTexture.index},
-					{"texCoord", m.pbrMetallicRoughness.baseColorTexture.texCoord}
-				},
-				{"metallicFactor", m.pbrMetallicRoughness.metallicFactor},
-				{"roughnessFactor", m.pbrMetallicRoughness.roughnessFactor},
-				{"metallicRoughnessTexture",
-					{"index", m.pbrMetallicRoughness.metallicRoughnessTexture.index},
-					{"texCoord", m.pbrMetallicRoughness.metallicRoughnessTexture.texCoord}
+			{"pbrMetallicRoughness", 
+				{
+					{"baseColorFactor", m.pbrMetallicRoughness.baseColorFactor},
+					{"baseColorTexture",
+						{
+							{"index", m.pbrMetallicRoughness.baseColorTexture.index},
+							{"texCoord", m.pbrMetallicRoughness.baseColorTexture.texCoord}
+						}
+					},
+					{"metallicFactor", m.pbrMetallicRoughness.metallicFactor},
+					{"roughnessFactor", m.pbrMetallicRoughness.roughnessFactor},
+					{"metallicRoughnessTexture", 
+						{
+							{"index", m.pbrMetallicRoughness.metallicRoughnessTexture.index},
+							{"texCoord", m.pbrMetallicRoughness.metallicRoughnessTexture.texCoord}
+						}
+					}
 				}
 			},
-			{"normalTexture",
-				{"scale", m.normalTexture.scale},
-				{"index", m.normalTexture.index},
-				{"texCoord", m.normalTexture.texCoord}
+			{"normalTexture", 
+				{
+					{"scale", m.normalTexture.scale},
+					{"index", m.normalTexture.index},
+					{"texCoord", m.normalTexture.texCoord}
+				}
 			},
 			{"emissiveFactor", m.emissiveFactor}
 		};
@@ -211,8 +180,82 @@ namespace ngsd {
 
 	void from_json(const json& j, ngsd::Material& m) {
 		j.at("name").get_to(m.name);
+
+		// metallicRoughness
+		{
+			auto& pbrm = m.pbrMetallicRoughness;
+			auto jpbr = j["pbrMetallicRoughness"];
+			jpbr.at("baseColorFactor").get_to(pbrm.baseColorFactor);
+
+			jpbr.at("baseColorTexture").at("index").get_to(pbrm.baseColorTexture.index);
+			jpbr.at("baseColorTexture").at("texCoord").get_to(pbrm.baseColorTexture.texCoord);
+
+			jpbr.at("metallicFactor").get_to(pbrm.metallicFactor);
+			jpbr.at("roughnessFactor").get_to(pbrm.roughnessFactor);
+
+			jpbr.at("metallicRoughnessTexture").at("index").get_to(pbrm.metallicRoughnessTexture.index);
+			jpbr.at("metallicRoughnessTexture").at("texCoord").get_to(pbrm.metallicRoughnessTexture.texCoord);
+		}
+
+		j.at("normalTexture").at("scale").get_to(m.normalTexture.scale);
+		j.at("normalTexture").at("index").get_to(m.normalTexture.index);
+		j.at("normalTexture").at("texCoord").get_to(m.normalTexture.texCoord);
+
+		j.at("emissiveFactor").get_to(m.emissiveFactor);
 	}
 
+
+
+	void to_json(json& j, const ngsd::Primitive& p) {
+		j = json{ {"firstIndex", p.firstIndex}, {"indexCount", p.indexCount}, {"materialIndex", p.materialIndex} };
+	}
+
+	void from_json(const json& j, ngsd::Primitive& p) {
+		j.at("firstIndex").get_to(p.firstIndex);
+		j.at("indexCount").get_to(p.indexCount);
+		j.at("materialIndex").get_to(p.materialIndex);
+	}
+
+
+	void to_json(json& j, const ngsd::Mesh& m) {
+		j = json{ {"name", m.name}, {"primitives", m.primitives} };
+	}
+
+	void from_json(const json& j, ngsd::Mesh& m) {
+		j.at("name").get_to(m.name);
+		j.at("primitives").get_to(m.primitives);
+	}
+
+
+
+	void to_json(json& j, const ngsd::Node& n) {
+		j = json{ {"name", n.name}, {"matrix4x4", n.matrix4x4}, 
+			{"meshIndex", n.meshIndex}, {"childNodeIndices", n.childNodeIndices} };
+	}
+
+	void from_json(const json& j, ngsd::Node& n) {
+		j.at("name").get_to(n.name);
+		j.at("matrix4x4").get_to(n.matrix4x4);
+		j.at("meshIndex").get_to(n.meshIndex);
+		j.at("childNodeIndices").get_to(n.childNodeIndices);
+	}
+
+
+
+	void to_json(json& j, const ngsd::Scene& s) {
+		j = json{ {"name", s.name}, {"nodes", s.nodes}, {"meshes", s.meshes}, {"materials", s.materials},
+			{"textures", s.textures}, {"images", s.images}, {"samplers", s.samplers} };
+	}
+
+	void from_json(const json& j, ngsd::Scene& s) {
+		j.at("name").get_to(s.name);
+		j.at("nodes").get_to(s.nodes);
+		j.at("meshes").get_to(s.meshes);
+		j.at("materials").get_to(s.materials);
+		j.at("textures").get_to(s.textures);
+		j.at("images").get_to(s.images);
+		j.at("samplers").get_to(s.samplers);
+	}
 }
 
 
