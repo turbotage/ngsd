@@ -256,6 +256,10 @@ namespace ngsd {
 		j.at("images").get_to(s.images);
 		j.at("samplers").get_to(s.samplers);
 	}
+
+
+
+
 }
 
 
